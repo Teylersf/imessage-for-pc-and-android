@@ -52,10 +52,17 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await fs.promises.readFile(filePath);
+    // HTTP header values must be Latin-1. macOS screenshot names contain a
+    // U+202F narrow no-break space, so provide an ASCII-safe `filename` plus an
+    // RFC 5987 `filename*` for the real (UTF-8) name.
+    const asciiName = att.name.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+    const disposition =
+      `inline; filename="${asciiName}"; ` +
+      `filename*=UTF-8''${encodeURIComponent(att.name)}`;
     return new NextResponse(new Uint8Array(data), {
       headers: {
         "Content-Type": mime,
-        "Content-Disposition": `inline; filename="${att.name.replace(/"/g, "")}"`,
+        "Content-Disposition": disposition,
         "Cache-Control": "private, max-age=86400",
       },
     });
